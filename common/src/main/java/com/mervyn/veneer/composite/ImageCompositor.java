@@ -84,7 +84,7 @@ public final class ImageCompositor {
                 ImageScaler.validate(layer.mask().getWidth(), layer.mask().getHeight(), targetFrameW, targetFrameH);
             }
             if (layer.pbrImage() != null) {
-                ImageScaler.validate(layer.pbrFrameW(), layer.pbrFrameH(), targetFrameW, targetFrameH);
+                ImageScaler.validateResample(layer.pbrFrameW(), layer.pbrFrameH(), targetFrameW, targetFrameH);
                 layer.transform().validate(layer.pbrFrameW(), layer.pbrFrameH());
             }
         }

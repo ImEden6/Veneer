@@ -20,13 +20,18 @@ public final class ImageScaler {
     }
 
     static void validate(int width, int height, int targetWidth, int targetHeight) {
+        validateResample(width, height, targetWidth, targetHeight);
+        if (targetWidth < width || targetHeight < height) {
+            throw new IllegalArgumentException("Cannot scale " + width + "x" + height + " to " + targetWidth + "x" + targetHeight
+                    + ": downscaling is not supported");
+        }
+    }
+
+    static void validateResample(int width, int height, int targetWidth, int targetHeight) {
         String sizes = width + "x" + height + " to " + targetWidth + "x" + targetHeight;
         if (!Mth.isPowerOfTwo(width) || !Mth.isPowerOfTwo(height)
                 || !Mth.isPowerOfTwo(targetWidth) || !Mth.isPowerOfTwo(targetHeight)) {
             throw new IllegalArgumentException("Cannot scale " + sizes + ": dimensions must be powers of two");
-        }
-        if (targetWidth < width || targetHeight < height) {
-            throw new IllegalArgumentException("Cannot scale " + sizes + ": downscaling is not supported");
         }
         if ((long) width * targetHeight != (long) height * targetWidth) {
             throw new IllegalArgumentException("Cannot scale " + sizes + ": aspect ratios differ");
