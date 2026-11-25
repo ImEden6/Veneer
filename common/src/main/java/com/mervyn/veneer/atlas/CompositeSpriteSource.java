@@ -36,7 +36,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
     public static final MapCodec<CompositeSpriteSource> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("sprite").forGetter(CompositeSpriteSource::sprite),
             ExtraCodecs.nonEmptyList(LayerDefinition.CODEC.listOf()).fieldOf("layers").forGetter(CompositeSpriteSource::layers),
-            Codec.INT.optionalFieldOf("metadata_source", 0).forGetter(CompositeSpriteSource::metadataSource),
+            ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("metadata_source", 0).forGetter(CompositeSpriteSource::metadataSource),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("max_frames", 64).forGetter(CompositeSpriteSource::maxFrames),
             Codec.BOOL.optionalFieldOf("pbr", true).forGetter(CompositeSpriteSource::pbr),
             InterpolationMode.CODEC.optionalFieldOf("interpolation", InterpolationMode.AUTO)
@@ -53,13 +53,15 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
             VeneerConstants.LOGGER.debug("Skipping sprite {}: a texture file for it already exists", sprite);
             return;
         }
+        if (metadataSource >= layers.size()) {
+            VeneerConstants.LOGGER.warn("Sprite {}: metadata_source {} is out of range for {} layer(s), using the first layer",
+                    sprite, metadataSource, layers.size());
+        }
         List<Input> inputs = inputs(resourceManager);
         for (PbrType type : PbrType.values()) {
             ResourceLocation path = TEXTURE_ID_CONVERTER.idToFile(withSuffix(sprite, type.suffix()));
             if (pbr && VeneerPbrRegistry.resolve(() -> companions(resourceManager, inputs, type)).stream().anyMatch(Optional::isPresent)) {
                 VeneerPbrRegistry.register(path, new VeneerPbrRegistry.PbrRecipe(this, type));
-            } else {
-                VeneerPbrRegistry.remove(path);
             }
         }
         output.add(sprite, loader -> stitch(inputs));
@@ -168,8 +170,6 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
                                 name, withSuffix(source.layer().texture(), type.suffix()));
                         return null;
                     }
-                    width = Math.max(width, companion.size().width());
-                    height = Math.max(height, companion.size().height());
                 }
                 loaded.add(companion);
             }
