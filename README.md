@@ -91,3 +91,7 @@ Java 21.
 ```
 
 Jars end up in `fabric/build/libs` and `neoforge/build/libs`. To try it with shaders on Fabric, `./gradlew :fabric:shaderClient` launches the game with Sodium, Iris and Euphoria Patches. Drop a shader pack into `fabric/run/shaderpacks` first.
+
+## License
+
+LGPL-3.0-only. The text is in [COPYING.LESSER](COPYING.LESSER), which builds on the GPL in [COPYING](COPYING).

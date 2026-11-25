@@ -20,6 +20,10 @@ tasks.withType(JavaCompile).configureEach {
     options.release = java_version.toInteger()
 }
 
+tasks.withType(Jar).configureEach {
+    from(rootProject.files('COPYING', 'COPYING.LESSER'))
+}
+
 processResources {
     def props = [
         'version', 'mod_id', 'mod_name', 'mod_author', 'license', 'description',
