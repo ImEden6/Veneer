@@ -3,7 +3,8 @@
   "package": "com.mervyn.veneer.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "SpriteSourcesAccessor"
+    "SpriteSourcesAccessor",
+    "MultiPackResourceManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -6,6 +6,7 @@ import com.mervyn.veneer.composite.FrameLayerSpec;
 import com.mervyn.veneer.composite.ImageCompositor;
 import com.mervyn.veneer.composite.PbrFrameLayerSpec;
 import com.mervyn.veneer.composite.PbrType;
+import com.mervyn.veneer.pbr.VeneerPbrRegistry;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -37,7 +38,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
             ExtraCodecs.nonEmptyList(LayerDefinition.CODEC.listOf()).fieldOf("layers").forGetter(CompositeSpriteSource::layers),
             Codec.INT.optionalFieldOf("metadata_source", 0).forGetter(CompositeSpriteSource::metadataSource),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("max_frames", 64).forGetter(CompositeSpriteSource::maxFrames),
-            Codec.BOOL.optionalFieldOf("pbr", false).forGetter(CompositeSpriteSource::pbr),
+            Codec.BOOL.optionalFieldOf("pbr", true).forGetter(CompositeSpriteSource::pbr),
             InterpolationMode.CODEC.optionalFieldOf("interpolation", InterpolationMode.AUTO)
                     .forGetter(CompositeSpriteSource::interpolation),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("interpolation_step", 1).forGetter(CompositeSpriteSource::interpolationStep)
@@ -47,25 +48,31 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
 
     @Override
     public void run(ResourceManager resourceManager, Output output) {
-        List<Input> inputs = layers.stream()
+        List<Input> inputs = inputs(resourceManager);
+        for (PbrType type : PbrType.values()) {
+            ResourceLocation path = TEXTURE_ID_CONVERTER.idToFile(withSuffix(sprite, type.suffix()));
+            if (pbr && VeneerPbrRegistry.resolve(() -> companions(resourceManager, inputs, type)).stream().anyMatch(Optional::isPresent)) {
+                VeneerPbrRegistry.register(path, new VeneerPbrRegistry.PbrRecipe(this, type));
+            } else {
+                VeneerPbrRegistry.remove(path);
+            }
+        }
+        output.add(sprite, loader -> stitch(inputs));
+    }
+
+    private List<Input> inputs(ResourceManager resourceManager) {
+        return layers.stream()
                 .map(layer -> new Input(layer,
                         resourceManager.getResource(TEXTURE_ID_CONVERTER.idToFile(layer.texture())),
                         layer.mask().flatMap(mask -> resourceManager.getResource(TEXTURE_ID_CONVERTER.idToFile(mask)))))
                 .toList();
-        output.add(sprite, loader -> stitch(inputs));
-        if (!pbr) {
-            return;
-        }
-        for (PbrType type : PbrType.values()) {
-            List<Optional<Resource>> companions = inputs.stream()
-                    .map(input -> input.texture().flatMap(texture -> resourceManager.getResource(
-                            TEXTURE_ID_CONVERTER.idToFile(withSuffix(input.layer().texture(), type.suffix())))))
-                    .toList();
-            if (companions.stream().anyMatch(Optional::isPresent)) {
-                ResourceLocation name = withSuffix(sprite, type.suffix());
-                output.add(name, loader -> stitchPbr(name, type, inputs, companions));
-            }
-        }
+    }
+
+    private static List<Optional<Resource>> companions(ResourceManager resourceManager, List<Input> inputs, PbrType type) {
+        return inputs.stream()
+                .map(input -> input.texture().flatMap(texture -> resourceManager.getResource(
+                        TEXTURE_ID_CONVERTER.idToFile(withSuffix(input.layer().texture(), type.suffix())))))
+                .toList();
     }
 
     private static ResourceLocation withSuffix(ResourceLocation id, String suffix) {
@@ -128,7 +135,10 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
     }
 
     @Nullable
-    private SpriteContents stitchPbr(ResourceLocation name, PbrType type, List<Input> inputs, List<Optional<Resource>> companions) {
+    public PbrImage compositePbr(ResourceManager resourceManager, PbrType type) {
+        ResourceLocation name = withSuffix(sprite, type.suffix());
+        List<Input> inputs = inputs(resourceManager);
+        List<Optional<Resource>> companions = companions(resourceManager, inputs, type);
         List<NativeImage> opened = new ArrayList<>();
         NativeImage result = null;
         try {
@@ -185,11 +195,10 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
             // vanilla's runtime lerp mixes G and B, which are discrete material flags in LabPBR specular
             AnimationMerger.Result output = type == PbrType.SPECULAR ? merged.stepped() : merged;
             AnimationMetadataSection animation = output.isAnimated() ? AnimationMerger.toMetadata(output, width, height) : null;
-            SpriteContents contents = new SpriteContents(name, new FrameSize(width, height), result,
-                    withAnimation(ResourceMetadata.EMPTY, animation));
+            PbrImage composite = new PbrImage(result, animation);
             result = null;
             VeneerConstants.LOGGER.info("Composited {} at {}x{} with {} frame(s)", name, width, height, frameCount);
-            return contents;
+            return composite;
         } catch (Exception e) {
             VeneerConstants.LOGGER.error("Failed to composite sprite {}", name, e);
             return null;
@@ -321,6 +330,9 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
     @Override
     public SpriteSourceType type() {
         return TYPE;
+    }
+
+    public record PbrImage(NativeImage image, @Nullable AnimationMetadataSection animation) {
     }
 
     private record Input(LayerDefinition layer, Optional<Resource> texture, Optional<Resource> mask) {
