@@ -63,4 +63,15 @@ class PbrMathTest {
         assertEquals(PixelMath.pack(200, 210, 230, 100), PbrMath.lerpSpecular(a, b, 0.5F));
         assertEquals(PixelMath.pack(10, 20, 30, 98), PbrMath.lerpSpecular(a, b, 0.49F));
     }
+
+    @Test
+    void normalsFollowTheSurface() {
+        int normal = PixelMath.pack(40, 200, 60, 10);
+        assertEquals(PixelMath.pack(40, 200, 60, 245), PbrMath.transformNormal(normal, 0, true, false));
+        assertEquals(PixelMath.pack(40, 200, 195, 10), PbrMath.transformNormal(normal, 0, false, true));
+        assertEquals(PixelMath.pack(40, 200, 10, 195), PbrMath.transformNormal(normal, 90, false, false));
+        assertEquals(PixelMath.pack(40, 200, 195, 245), PbrMath.transformNormal(normal, 180, false, false));
+        assertEquals(PixelMath.pack(40, 200, 245, 60), PbrMath.transformNormal(normal, 270, false, false));
+        assertEquals(PixelMath.pack(40, 200, 245, 195), PbrMath.transformNormal(normal, 90, true, false));
+    }
 }

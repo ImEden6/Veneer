@@ -32,7 +32,7 @@ import java.util.Optional;
 
 public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinition> layers, int metadataSource,
                                     int maxFrames, boolean pbr, InterpolationMode interpolation,
-                                    int interpolationStep) implements SpriteSource {
+                                    int interpolationStep, boolean skipIfExists) implements SpriteSource {
     public static final MapCodec<CompositeSpriteSource> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("sprite").forGetter(CompositeSpriteSource::sprite),
             ExtraCodecs.nonEmptyList(LayerDefinition.CODEC.listOf()).fieldOf("layers").forGetter(CompositeSpriteSource::layers),
@@ -41,13 +41,18 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
             Codec.BOOL.optionalFieldOf("pbr", true).forGetter(CompositeSpriteSource::pbr),
             InterpolationMode.CODEC.optionalFieldOf("interpolation", InterpolationMode.AUTO)
                     .forGetter(CompositeSpriteSource::interpolation),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("interpolation_step", 1).forGetter(CompositeSpriteSource::interpolationStep)
+            ExtraCodecs.POSITIVE_INT.optionalFieldOf("interpolation_step", 1).forGetter(CompositeSpriteSource::interpolationStep),
+            Codec.BOOL.optionalFieldOf("skip_if_exists", false).forGetter(CompositeSpriteSource::skipIfExists)
     ).apply(instance, CompositeSpriteSource::new));
 
     public static SpriteSourceType TYPE;
 
     @Override
     public void run(ResourceManager resourceManager, Output output) {
+        if (skipIfExists && resourceManager.getResource(TEXTURE_ID_CONVERTER.idToFile(sprite)).isPresent()) {
+            VeneerConstants.LOGGER.debug("Skipping sprite {}: a texture file for it already exists", sprite);
+            return;
+        }
         List<Input> inputs = inputs(resourceManager);
         for (PbrType type : PbrType.values()) {
             ResourceLocation path = TEXTURE_ID_CONVERTER.idToFile(withSuffix(sprite, type.suffix()));
@@ -108,7 +113,8 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
                     specs.add(new FrameLayerSpec(source.image(), sample.frameIndex() * source.size().height(),
                             source.size().width(), source.size().height(),
                             layer.blend(), layer.tint(), source.mask(), layer.invertMask(),
-                            sample.nextFrameIndex() * source.size().height(), sample.weight255()));
+                            sample.nextFrameIndex() * source.size().height(), sample.weight255(),
+                            layer.opacity(), layer.transform()));
                 }
                 ImageCompositor.compositeInto(result, frame * height, width, height, specs);
             }
@@ -187,7 +193,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
                             companion == null ? 0 : companion.size().height(),
                             sample.nextFrameIndex() * source.size().height(),
                             companion == null ? 0 : companion.yOffset(sample.nextFrameIndex()),
-                            sample.weight255()));
+                            sample.weight255(), source.layer().opacity(), source.layer().transform()));
                 }
                 ImageCompositor.compositePbrInto(result, frame * height, width, height, type, specs);
             }

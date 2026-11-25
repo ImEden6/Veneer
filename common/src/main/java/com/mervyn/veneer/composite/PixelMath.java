@@ -39,6 +39,11 @@ public final class PixelMath {
         return pack(scale(alpha(abgr), maskAlpha), blue(abgr), green(abgr), red(abgr));
     }
 
+    public static int applyOpacity(int abgr, float opacity) {
+        int scaled = Math.max(0, Math.min(255, Math.round(alpha(abgr) * opacity)));
+        return pack(scaled, blue(abgr), green(abgr), red(abgr));
+    }
+
     public static int lerpAbgr(int abgrA, int abgrB, float t) {
         float alphaA = alpha(abgrA) / 255.0F;
         float alphaB = alpha(abgrB) / 255.0F;

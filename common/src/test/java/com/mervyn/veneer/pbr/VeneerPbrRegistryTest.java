@@ -20,7 +20,7 @@ class VeneerPbrRegistryTest {
     private static final ResourceLocation PATH = ResourceLocation.parse("veneer:textures/block/fancy_ore_n.png");
     private static final VeneerPbrRegistry.PbrRecipe RECIPE = new VeneerPbrRegistry.PbrRecipe(
             new CompositeSpriteSource(ResourceLocation.parse("veneer:block/fancy_ore"), List.of(), 0, 64, true,
-                    InterpolationMode.AUTO, 1),
+                    InterpolationMode.AUTO, 1, false),
             PbrType.NORMAL);
 
     @BeforeEach

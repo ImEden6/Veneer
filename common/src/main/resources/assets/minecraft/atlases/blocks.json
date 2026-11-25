@@ -34,6 +34,24 @@
         { "texture": "minecraft:block/magma" },
         { "texture": "minecraft:block/sculk_catalyst_side_bloom", "blend": "add" }
       ]
+    },
+    {
+      "type": "veneer:composite",
+      "sprite": "veneer:block/test_transformed",
+      "layers": [
+        { "texture": "minecraft:block/stone" },
+        { "texture": "minecraft:block/iron_ore", "blend": "overlay", "opacity": 0.75, "rotate": 90, "flip_x": true },
+        { "texture": "minecraft:block/gold_ore", "blend": "darken", "rotate": 270 },
+        { "texture": "minecraft:block/coal_ore", "blend": "lighten", "rotate": 180, "flip_y": true }
+      ]
+    },
+    {
+      "type": "veneer:composite",
+      "sprite": "minecraft:block/dirt",
+      "skip_if_exists": true,
+      "layers": [
+        { "texture": "minecraft:block/stone" }
+      ]
     }
   ]
 }

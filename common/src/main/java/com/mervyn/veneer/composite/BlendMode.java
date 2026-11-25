@@ -9,7 +9,10 @@ public enum BlendMode implements StringRepresentable {
     NORMAL,
     MULTIPLY,
     ADD,
-    SCREEN;
+    SCREEN,
+    OVERLAY,
+    DARKEN,
+    LIGHTEN;
 
     public static final StringRepresentable.EnumCodec<BlendMode> CODEC = StringRepresentable.fromEnum(BlendMode::values);
 
@@ -42,6 +45,9 @@ public enum BlendMode implements StringRepresentable {
             case MULTIPLY -> d * s;
             case ADD -> Math.min(d + s, 1.0F);
             case SCREEN -> d + s - d * s;
+            case OVERLAY -> d < 0.5F ? 2.0F * d * s : 1.0F - 2.0F * (1.0F - d) * (1.0F - s);
+            case DARKEN -> Math.min(d, s);
+            case LIGHTEN -> Math.max(d, s);
         };
         return toByte((mixed * srcA + d * dstWeight) / outA);
     }

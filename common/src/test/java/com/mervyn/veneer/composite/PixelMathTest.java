@@ -62,4 +62,11 @@ class PixelMathTest {
         assertEquals(PixelMath.pack(128, 128, 150, 20), PixelMath.lerpChannelsIndependent(a, b, 0.5F));
         assertEquals(b, PixelMath.lerpChannelsIndependent(a, b, 1.0F));
     }
+
+    @Test
+    void opacityScalesAlphaOnly() {
+        assertEquals(0x00123456, PixelMath.applyOpacity(0xFF123456, 0.0F));
+        assertEquals(0x80123456, PixelMath.applyOpacity(0xFF123456, 0.5F));
+        assertEquals(0xFF123456, PixelMath.applyOpacity(0xFF123456, 1.0F));
+    }
 }

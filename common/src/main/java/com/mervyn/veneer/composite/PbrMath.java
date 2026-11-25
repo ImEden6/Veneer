@@ -32,6 +32,24 @@ public final class PbrMath {
                 PixelMath.lerp(PixelMath.red(dstAbgr), PixelMath.red(srcAbgr), effectiveAlpha / 255.0F));
     }
 
+    public static int transformNormal(int abgr, int rotate, boolean flipX, boolean flipY) {
+        int x = flipX ? 255 - PixelMath.red(abgr) : PixelMath.red(abgr);
+        int y = flipY ? 255 - PixelMath.green(abgr) : PixelMath.green(abgr);
+        int red = switch (rotate) {
+            case 90 -> 255 - y;
+            case 180 -> 255 - x;
+            case 270 -> y;
+            default -> x;
+        };
+        int green = switch (rotate) {
+            case 90 -> x;
+            case 180 -> 255 - y;
+            case 270 -> 255 - x;
+            default -> y;
+        };
+        return PixelMath.pack(PixelMath.alpha(abgr), PixelMath.blue(abgr), green, red);
+    }
+
     public static int lerpNormal(int abgrA, int abgrB, float t) {
         return PixelMath.lerpChannelsIndependent(abgrA, abgrB, t);
     }

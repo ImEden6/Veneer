@@ -26,11 +26,15 @@ public final class ImageCompositor {
         for (NativeImage input : inputs) {
             ImageScaler.validate(input.getWidth(), input.getHeight(), width, height);
         }
+        for (LayerSpec layer : layers) {
+            layer.transform().validate(layer.image().getWidth(), layer.image().getHeight());
+        }
 
         NativeImage canvas = new NativeImage(width, height, true);
         compositeInto(canvas, 0, width, height, layers.stream()
                 .map(layer -> new FrameLayerSpec(layer.image(), 0, layer.image().getWidth(), layer.image().getHeight(),
-                        layer.blendMode(), layer.tintRgb(), layer.mask(), layer.invertMask()))
+                        layer.blendMode(), layer.tintRgb(), layer.mask(), layer.invertMask(),
+                        0, 0, layer.opacity(), layer.transform()))
                 .toList());
         return canvas;
     }
@@ -38,6 +42,7 @@ public final class ImageCompositor {
     public static void compositeInto(NativeImage dst, int dstYOffset, int targetFrameW, int targetFrameH, List<FrameLayerSpec> layers) {
         for (FrameLayerSpec layer : layers) {
             ImageScaler.validate(layer.srcFrameW(), layer.srcFrameH(), targetFrameW, targetFrameH);
+            layer.transform().validate(layer.srcFrameW(), layer.srcFrameH());
             if (layer.mask() != null) {
                 ImageScaler.validate(layer.mask().getWidth(), layer.mask().getHeight(), targetFrameW, targetFrameH);
             }
@@ -45,11 +50,12 @@ public final class ImageCompositor {
 
         for (FrameLayerSpec layer : layers) {
             NativeImage mask = layer.mask();
+            Transform transform = layer.transform();
             for (int y = 0; y < targetFrameH; y++) {
-                int srcY = y * layer.srcFrameH() / targetFrameH;
                 int dstY = dstYOffset + y;
                 for (int x = 0; x < targetFrameW; x++) {
-                    int srcX = x * layer.srcFrameW() / targetFrameW;
+                    int srcX = transform.sourceX(x, y, targetFrameW, targetFrameH) * layer.srcFrameW() / targetFrameW;
+                    int srcY = transform.sourceY(x, y, targetFrameW, targetFrameH) * layer.srcFrameH() / targetFrameH;
                     int pixel = layer.image().getPixelRGBA(srcX, layer.srcYOffset() + srcY);
                     if (layer.interpWeight255() > 0) {
                         pixel = PixelMath.lerpAbgr(pixel, layer.image().getPixelRGBA(srcX, layer.nextSrcYOffset() + srcY),
@@ -62,6 +68,7 @@ public final class ImageCompositor {
                         int maskPixel = mask.getPixelRGBA(x * mask.getWidth() / targetFrameW, y * mask.getHeight() / targetFrameH);
                         pixel = PixelMath.applyMask(pixel, maskPixel, layer.invertMask());
                     }
+                    pixel = PixelMath.applyOpacity(pixel, layer.opacity());
                     dst.setPixelRGBA(x, dstY, layer.blendMode().blend(dst.getPixelRGBA(x, dstY), pixel));
                 }
             }
@@ -72,11 +79,13 @@ public final class ImageCompositor {
                                         List<PbrFrameLayerSpec> layers) {
         for (PbrFrameLayerSpec layer : layers) {
             ImageScaler.validate(layer.albedoFrameW(), layer.albedoFrameH(), targetFrameW, targetFrameH);
+            layer.transform().validate(layer.albedoFrameW(), layer.albedoFrameH());
             if (layer.mask() != null) {
                 ImageScaler.validate(layer.mask().getWidth(), layer.mask().getHeight(), targetFrameW, targetFrameH);
             }
             if (layer.pbrImage() != null) {
                 ImageScaler.validate(layer.pbrFrameW(), layer.pbrFrameH(), targetFrameW, targetFrameH);
+                layer.transform().validate(layer.pbrFrameW(), layer.pbrFrameH());
             }
         }
 
@@ -84,13 +93,16 @@ public final class ImageCompositor {
         for (PbrFrameLayerSpec layer : layers) {
             NativeImage mask = layer.mask();
             NativeImage pbr = layer.pbrImage();
+            Transform transform = layer.transform();
+            boolean turnNormals = pbrType == PbrType.NORMAL && !transform.isIdentity();
             for (int y = 0; y < targetFrameH; y++) {
-                int albedoY = y * layer.albedoFrameH() / targetFrameH;
-                int pbrY = y * layer.pbrFrameH() / targetFrameH;
                 float weight = layer.interpWeight255() / 255.0F;
                 int dstY = dstYOffset + y;
                 for (int x = 0; x < targetFrameW; x++) {
-                    int albedoX = x * layer.albedoFrameW() / targetFrameW;
+                    int u = transform.sourceX(x, y, targetFrameW, targetFrameH);
+                    int v = transform.sourceY(x, y, targetFrameW, targetFrameH);
+                    int albedoX = u * layer.albedoFrameW() / targetFrameW;
+                    int albedoY = v * layer.albedoFrameH() / targetFrameH;
                     int albedo = layer.albedo().getPixelRGBA(albedoX, layer.albedoYOffset() + albedoY);
                     if (layer.interpWeight255() > 0) {
                         albedo = PixelMath.lerpAbgr(albedo,
@@ -100,12 +112,17 @@ public final class ImageCompositor {
                         int maskPixel = mask.getPixelRGBA(x * mask.getWidth() / targetFrameW, y * mask.getHeight() / targetFrameH);
                         albedo = PixelMath.applyMask(albedo, maskPixel, layer.invertMask());
                     }
+                    albedo = PixelMath.applyOpacity(albedo, layer.opacity());
                     int source = pbrType.neutralAbgr();
                     if (pbr != null) {
-                        int pbrX = x * layer.pbrFrameW() / targetFrameW;
+                        int pbrX = u * layer.pbrFrameW() / targetFrameW;
+                        int pbrY = v * layer.pbrFrameH() / targetFrameH;
                         source = pbr.getPixelRGBA(pbrX, layer.pbrYOffset() + pbrY);
                         if (layer.interpWeight255() > 0) {
                             source = pbrType.lerp(source, pbr.getPixelRGBA(pbrX, layer.nextPbrYOffset() + pbrY), weight);
+                        }
+                        if (turnNormals) {
+                            source = PbrMath.transformNormal(source, transform.rotate(), transform.flipX(), transform.flipY());
                         }
                     }
                     dst.setPixelRGBA(x, dstY, pbrType.blend(dst.getPixelRGBA(x, dstY), source, PixelMath.alpha(albedo)));

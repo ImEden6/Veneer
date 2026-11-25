@@ -65,4 +65,18 @@ class BlendModeTest {
         }
         assertEquals("multiply", BlendMode.MULTIPLY.getSerializedName());
     }
+
+    @Test
+    void overlayDarkensDarkAndBrightensBright() {
+        int dark = BlendMode.OVERLAY.blend(0xFF404040, 0xFF404040);
+        assertEquals(0xFF202020, dark);
+        int bright = BlendMode.OVERLAY.blend(0xFFC0C0C0, 0xFFC0C0C0);
+        assertEquals(0xFFE0E0E0, bright);
+    }
+
+    @Test
+    void darkenAndLightenPickPerChannel() {
+        assertEquals(0xFF102010, BlendMode.DARKEN.blend(0xFF104010, 0xFF802080));
+        assertEquals(0xFF804080, BlendMode.LIGHTEN.blend(0xFF104010, 0xFF802080));
+    }
 }
