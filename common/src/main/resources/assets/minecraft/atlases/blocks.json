@@ -5,7 +5,8 @@
       "sprite": "veneer:block/test_tinted",
       "layers": [
         { "texture": "minecraft:block/stone" },
-        { "texture": "minecraft:block/iron_ore", "tint": "#FF8844" }
+        { "texture": "minecraft:block/iron_ore", "tint": "#FF8844" },
+        { "texture": "othermod:block/compat_overlay", "optional": true }
       ]
     },
     {

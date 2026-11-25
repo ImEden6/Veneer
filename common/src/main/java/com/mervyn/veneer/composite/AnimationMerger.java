@@ -24,13 +24,7 @@ public final class AnimationMerger {
             return new Result(List.of(still), List.of(), false);
         }
 
-        long period = 1;
-        for (List<Frame> layer : layers) {
-            if (layer.size() > 1) {
-                period = lcm(period, layer.stream().mapToLong(Frame::duration).sum());
-            }
-        }
-
+        long period = period(layers);
         List<Timeline> animated = timelines.stream().filter(timeline -> timeline.frames().size() > 1).toList();
         boolean blend = mode == InterpolationMode.AUTO && animated.stream().anyMatch(Timeline::interpolated);
         boolean runtime = blend && animated.stream().allMatch(Timeline::interpolated)
@@ -128,16 +122,29 @@ public final class AnimationMerger {
         return new AnimationMetadataSection(frames, frameWidth, frameHeight, 1, result.outputInterpolated());
     }
 
-    private static long lcm(long a, long b) {
-        long x = a;
-        long y = b;
-        while (y != 0) {
-            long remainder = x % y;
-            x = y;
-            y = remainder;
+    static long period(List<List<Frame>> layers) {
+        long period = 1;
+        for (List<Frame> layer : layers) {
+            if (layer.size() > 1) {
+                long length = layer.stream().mapToLong(Frame::duration).sum();
+                long factor = period / gcd(period, length);
+                if (factor > Long.MAX_VALUE / length) {
+                    VeneerConstants.LOGGER.warn("Merged animation period overflows, it will be truncated");
+                    return Long.MAX_VALUE;
+                }
+                period = factor * length;
+            }
         }
-        long factor = a / x;
-        return factor > Long.MAX_VALUE / b ? Long.MAX_VALUE : factor * b;
+        return period;
+    }
+
+    private static long gcd(long a, long b) {
+        while (b != 0) {
+            long remainder = a % b;
+            a = b;
+            b = remainder;
+        }
+        return a;
     }
 
     public record Frame(int index, int duration) {

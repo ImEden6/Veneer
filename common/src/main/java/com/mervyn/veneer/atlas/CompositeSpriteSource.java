@@ -57,8 +57,9 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
             return;
         }
         for (PbrType type : PbrType.values()) {
-            List<Optional<Resource>> companions = layers.stream()
-                    .map(layer -> resourceManager.getResource(TEXTURE_ID_CONVERTER.idToFile(withSuffix(layer.texture(), type.suffix()))))
+            List<Optional<Resource>> companions = inputs.stream()
+                    .map(input -> input.texture().flatMap(texture -> resourceManager.getResource(
+                            TEXTURE_ID_CONVERTER.idToFile(withSuffix(input.layer().texture(), type.suffix())))))
                     .toList();
             if (companions.stream().anyMatch(Optional::isPresent)) {
                 ResourceLocation name = withSuffix(sprite, type.suffix());
@@ -95,7 +96,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
                 List<FrameLayerSpec> specs = new ArrayList<>();
                 for (int i = 0; i < sources.size(); i++) {
                     Source source = sources.get(i);
-                    LayerDefinition layer = inputs.get(i).layer();
+                    LayerDefinition layer = source.layer();
                     AnimationMerger.LayerSample sample = samples.get(i);
                     specs.add(new FrameLayerSpec(source.image(), sample.frameIndex() * source.size().height(),
                             source.size().width(), source.size().height(),
@@ -105,10 +106,13 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
                 ImageCompositor.compositeInto(result, frame * height, width, height, specs);
             }
 
-            int base = metadataSource >= 0 && metadataSource < sources.size() ? metadataSource : 0;
+            Source base = sources.stream()
+                    .filter(source -> source.index() == metadataSource)
+                    .findFirst()
+                    .orElse(sources.get(0));
             AnimationMetadataSection animation = merged.isAnimated() ? AnimationMerger.toMetadata(merged, width, height) : null;
             SpriteContents contents = new SpriteContents(sprite, new FrameSize(width, height), result,
-                    withAnimation(sources.get(base).metadata(), animation));
+                    withAnimation(base.metadata(), animation));
             result = null;
             VeneerConstants.LOGGER.info("Composited {} at {}x{} with {} frame(s)", sprite, width, height, frameCount);
             return contents;
@@ -140,11 +144,12 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
                 width = Math.max(width, source.width());
                 height = Math.max(height, source.height());
                 Companion companion = null;
-                if (companions.get(i).isPresent()) {
-                    companion = loadCompanion(companions.get(i).get(), source, opened);
+                Optional<Resource> resource = companions.get(source.index());
+                if (resource.isPresent()) {
+                    companion = loadCompanion(resource.get(), source, opened);
                     if (companion == null) {
                         VeneerConstants.LOGGER.error("Sprite {}: {} does not divide into frames of its size",
-                                name, withSuffix(inputs.get(i).layer().texture(), type.suffix()));
+                                name, withSuffix(source.layer().texture(), type.suffix()));
                         return null;
                     }
                     width = Math.max(width, companion.size().width());
@@ -165,7 +170,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
                     AnimationMerger.LayerSample sample = samples.get(i);
                     specs.add(new PbrFrameLayerSpec(source.image(), sample.frameIndex() * source.size().height(),
                             source.size().width(), source.size().height(),
-                            source.mask(), inputs.get(i).layer().invertMask(),
+                            source.mask(), source.layer().invertMask(),
                             companion == null ? null : companion.image(),
                             companion == null ? 0 : companion.yOffset(sample.frameIndex()),
                             companion == null ? 0 : companion.size().width(),
@@ -180,7 +185,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
             // vanilla's runtime lerp mixes G and B, which are discrete material flags in LabPBR specular
             AnimationMerger.Result output = type == PbrType.SPECULAR ? merged.stepped() : merged;
             AnimationMetadataSection animation = output.isAnimated() ? AnimationMerger.toMetadata(output, width, height) : null;
-            SpriteContents contents = new SpriteContents(name,new FrameSize(width, height), result,
+            SpriteContents contents = new SpriteContents(name, new FrameSize(width, height), result,
                     withAnimation(ResourceMetadata.EMPTY, animation));
             result = null;
             VeneerConstants.LOGGER.info("Composited {} at {}x{} with {} frame(s)", name, width, height, frameCount);
@@ -221,18 +226,27 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
     @Nullable
     private List<Source> loadAll(List<Input> inputs, List<NativeImage> opened) throws IOException {
         List<Source> sources = new ArrayList<>();
-        for (Input input : inputs) {
-            Source source = load(input, opened);
+        for (int i = 0; i < inputs.size(); i++) {
+            Input input = inputs.get(i);
+            if (input.texture().isEmpty() && input.layer().optional()) {
+                VeneerConstants.LOGGER.debug("Sprite {}: skipping optional layer {}", sprite, input.layer().texture());
+                continue;
+            }
+            Source source = load(i, input, opened);
             if (source == null) {
                 return null;
             }
             sources.add(source);
         }
+        if (sources.isEmpty()) {
+            VeneerConstants.LOGGER.error("Sprite {}: every layer was skipped", sprite);
+            return null;
+        }
         return sources;
     }
 
     @Nullable
-    private Source load(Input input, List<NativeImage> opened) throws IOException {
+    private Source load(int index, Input input, List<NativeImage> opened) throws IOException {
         LayerDefinition layer = input.layer();
         if (input.texture().isEmpty()) {
             VeneerConstants.LOGGER.error("Sprite {}: missing texture {}", sprite, layer.texture());
@@ -250,7 +264,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
 
         AnimationMetadataSection animation = metadata.getSection(AnimationMetadataSection.SERIALIZER).orElse(null);
         if (animation == null) {
-            return new Source(image, mask, metadata, new FrameSize(image.getWidth(), image.getHeight()),
+            return new Source(index, layer, image, mask, metadata, new FrameSize(image.getWidth(), image.getHeight()),
                     new AnimationMerger.Timeline(List.of(new AnimationMerger.Frame(0, 1)), false));
         }
 
@@ -261,7 +275,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
             return null;
         }
         List<AnimationMerger.Frame> frames = frames(animation, image.getHeight() / size.height(), layer.texture());
-        return new Source(image, mask, metadata, size,
+        return new Source(index, layer, image, mask, metadata, size,
                 new AnimationMerger.Timeline(frames, animation.isInterpolatedFrames() && frames.size() > 1));
     }
 
@@ -312,8 +326,8 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
     private record Input(LayerDefinition layer, Optional<Resource> texture, Optional<Resource> mask) {
     }
 
-    private record Source(NativeImage image, @Nullable NativeImage mask, ResourceMetadata metadata, FrameSize size,
-                          AnimationMerger.Timeline timeline) {
+    private record Source(int index, LayerDefinition layer, NativeImage image, @Nullable NativeImage mask,
+                          ResourceMetadata metadata, FrameSize size, AnimationMerger.Timeline timeline) {
         int width() {
             return mask == null ? size.width() : Math.max(size.width(), mask.getWidth());
         }

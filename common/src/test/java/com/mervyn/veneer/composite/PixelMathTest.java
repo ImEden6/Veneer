@@ -40,11 +40,26 @@ class PixelMathTest {
     }
 
     @Test
+    void premultipliedLerpKeepsColourWhenFading() {
+        assertEquals(0x800000FF, PixelMath.lerpAbgr(0xFF0000FF, 0x00000000, 0.5F));
+        assertEquals(0, PixelMath.lerpAbgr(0x00123456, 0x00FFFFFF, 0.5F));
+    }
+
+    @Test
+    void premultipliedLerpMatchesPlainLerpWhenOpaque() {
+        int a = PixelMath.pack(255, 255, 100, 20);
+        int b = PixelMath.pack(255, 0, 200, 20);
+        assertEquals(a, PixelMath.lerpAbgr(a, b, 0.0F));
+        assertEquals(PixelMath.pack(255, 128, 150, 20), PixelMath.lerpAbgr(a, b, 0.5F));
+        assertEquals(b, PixelMath.lerpAbgr(a, b, 1.0F));
+    }
+
+    @Test
     void lerpMovesEveryChannel() {
         int a = PixelMath.pack(0, 255, 100, 20);
         int b = PixelMath.pack(255, 0, 200, 20);
-        assertEquals(a, PixelMath.lerpAbgr(a, b, 0.0F));
-        assertEquals(PixelMath.pack(128, 128, 150, 20), PixelMath.lerpAbgr(a, b, 0.5F));
-        assertEquals(b, PixelMath.lerpAbgr(a, b, 1.0F));
+        assertEquals(a, PixelMath.lerpChannelsIndependent(a, b, 0.0F));
+        assertEquals(PixelMath.pack(128, 128, 150, 20), PixelMath.lerpChannelsIndependent(a, b, 0.5F));
+        assertEquals(b, PixelMath.lerpChannelsIndependent(a, b, 1.0F));
     }
 }

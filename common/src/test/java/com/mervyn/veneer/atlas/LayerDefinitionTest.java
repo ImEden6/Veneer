@@ -1,5 +1,6 @@
 package com.mervyn.veneer.atlas;
 
+import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.mojang.serialization.JsonOps;
 import org.junit.jupiter.api.Test;
@@ -7,11 +8,22 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LayerDefinitionTest {
     private static int parse(JsonPrimitive json) {
         return LayerDefinition.TINT_CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
+    }
+
+    private static boolean optional(String json) {
+        return LayerDefinition.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json)).getOrThrow().optional();
+    }
+
+    @Test
+    void layersAreRequiredByDefault() {
+        assertFalse(optional("{\"texture\": \"minecraft:block/stone\"}"));
+        assertTrue(optional("{\"texture\": \"minecraft:block/stone\", \"optional\": true}"));
     }
 
     @Test

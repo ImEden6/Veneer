@@ -12,7 +12,8 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.regex.Pattern;
 
-public record LayerDefinition(ResourceLocation texture, BlendMode blend, OptionalInt tint, Optional<ResourceLocation> mask, boolean invertMask) {
+public record LayerDefinition(ResourceLocation texture, BlendMode blend, OptionalInt tint, Optional<ResourceLocation> mask, boolean invertMask,
+                              boolean optional) {
     private static final Pattern HEX_RGB = Pattern.compile("#?[0-9a-fA-F]{6}");
 
     public static final Codec<Integer> TINT_CODEC = Codec.either(Codec.STRING, Codec.INT).comapFlatMap(
@@ -27,7 +28,8 @@ public record LayerDefinition(ResourceLocation texture, BlendMode blend, Optiona
                             tint -> tint.isPresent() ? Optional.of(tint.getAsInt()) : Optional.<Integer>empty())
                     .forGetter(LayerDefinition::tint),
             ResourceLocation.CODEC.optionalFieldOf("mask").forGetter(LayerDefinition::mask),
-            Codec.BOOL.optionalFieldOf("invert_mask", false).forGetter(LayerDefinition::invertMask)
+            Codec.BOOL.optionalFieldOf("invert_mask", false).forGetter(LayerDefinition::invertMask),
+            Codec.BOOL.optionalFieldOf("optional", false).forGetter(LayerDefinition::optional)
     ).apply(instance, LayerDefinition::new));
 
     private static DataResult<Integer> parseHex(String value) {

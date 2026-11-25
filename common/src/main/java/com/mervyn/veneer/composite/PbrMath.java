@@ -14,7 +14,7 @@ public final class PbrMath {
         if (effectiveAlpha >= 255) {
             return srcAbgr;
         }
-        return PixelMath.lerpAbgr(dstAbgr, srcAbgr, effectiveAlpha / 255.0F);
+        return PixelMath.lerpChannelsIndependent(dstAbgr, srcAbgr, effectiveAlpha / 255.0F);
     }
 
     public static int blendSpecular(int dstAbgr, int srcAbgr, int effectiveAlpha) {
@@ -33,7 +33,7 @@ public final class PbrMath {
     }
 
     public static int lerpNormal(int abgrA, int abgrB, float t) {
-        return PixelMath.lerpAbgr(abgrA, abgrB, t);
+        return PixelMath.lerpChannelsIndependent(abgrA, abgrB, t);
     }
 
     public static int lerpSpecular(int abgrA, int abgrB, float t) {

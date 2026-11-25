@@ -174,6 +174,30 @@ class AnimationMergerTest {
     }
 
     @Test
+    void periodsPastIntRangeStayPositive() {
+        List<List<Frame>> layers = List.of(strip(997, 1), strip(991, 1), strip(983, 1), strip(977, 1));
+        assertEquals(997L * 991 * 983 * 977, AnimationMerger.period(layers));
+        Result capped = discrete(layers, 64);
+        assertEquals(64, capped.uniqueFrames().size());
+        assertTrue(capped.schedule().stream().allMatch(frame -> frame.durationTicks() > 0));
+
+        Timeline[] smoothed = layers.stream().map(AnimationMergerTest::smooth).toArray(Timeline[]::new);
+        assertEquals(64, auto(1, smoothed).schedule().size());
+    }
+
+    @Test
+    void overflowingPeriodSaturates() {
+        List<List<Frame>> layers = IntStream.of(1000003, 1000033, 1000037, 1000039)
+                .mapToObj(duration -> strip(2, duration))
+                .toList();
+        assertEquals(Long.MAX_VALUE, AnimationMerger.period(layers));
+        Result result = discrete(layers, 64);
+        assertTrue(result.uniqueFrames().size() <= 64);
+        assertTrue(result.schedule().size() <= AnimationMerger.MAX_STEPS);
+        assertTrue(result.schedule().stream().allMatch(frame -> frame.durationTicks() > 0));
+    }
+
+    @Test
     void ignoreModeKeepsFramesDiscrete() {
         Result result = AnimationMerger.merge(List.of(smooth(strip(2, 4))), 64, InterpolationMode.IGNORE, 1);
         assertFalse(result.outputInterpolated());

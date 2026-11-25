@@ -50,6 +50,13 @@ class PbrMathTest {
     }
 
     @Test
+    void normalLerpIgnoresHeightForColour() {
+        int low = PixelMath.pack(0, 255, 128, 255);
+        int high = PixelMath.pack(255, 255, 128, 255);
+        assertEquals(PixelMath.pack(128, 255, 128, 255), PbrMath.lerpNormal(low, high, 0.5F));
+    }
+
+    @Test
     void specularLerpSnapsFlags() {
         int a = PixelMath.pack(10, 20, 30, 0);
         int b = PixelMath.pack(200, 210, 230, 200);

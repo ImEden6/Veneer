@@ -40,6 +40,20 @@ public final class PixelMath {
     }
 
     public static int lerpAbgr(int abgrA, int abgrB, float t) {
+        float alphaA = alpha(abgrA) / 255.0F;
+        float alphaB = alpha(abgrB) / 255.0F;
+        float outAlpha = alphaA + (alphaB - alphaA) * t;
+        if (outAlpha <= 0.0F) {
+            return 0;
+        }
+        return pack(
+                Math.round(outAlpha * 255.0F),
+                lerpPremultiplied(blue(abgrA) * alphaA, blue(abgrB) * alphaB, t, outAlpha),
+                lerpPremultiplied(green(abgrA) * alphaA, green(abgrB) * alphaB, t, outAlpha),
+                lerpPremultiplied(red(abgrA) * alphaA, red(abgrB) * alphaB, t, outAlpha));
+    }
+
+    public static int lerpChannelsIndependent(int abgrA, int abgrB, float t) {
         return pack(
                 lerp(alpha(abgrA), alpha(abgrB), t),
                 lerp(blue(abgrA), blue(abgrB), t),
@@ -49,6 +63,10 @@ public final class PixelMath {
 
     static int lerp(int from, int to, float t) {
         return Math.max(0, Math.min(255, Math.round(from + (to - from) * t)));
+    }
+
+    private static int lerpPremultiplied(float from, float to, float t, float outAlpha) {
+        return Math.max(0, Math.min(255, Math.round((from + (to - from) * t) / outAlpha)));
     }
 
     private static int scale(int channel, int factor) {
