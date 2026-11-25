@@ -1,0 +1,38 @@
+{
+  "sources": [
+    {
+      "type": "veneer:composite",
+      "sprite": "veneer:block/test_tinted",
+      "layers": [
+        { "texture": "minecraft:block/stone" },
+        { "texture": "minecraft:block/iron_ore", "tint": "#FF8844" }
+      ]
+    },
+    {
+      "type": "veneer:composite",
+      "sprite": "veneer:block/test_animated",
+      "metadata_source": 1,
+      "layers": [
+        { "texture": "minecraft:block/stone" },
+        { "texture": "minecraft:block/sea_lantern", "blend": "add" }
+      ]
+    },
+    {
+      "type": "veneer:composite",
+      "sprite": "veneer:block/test_interpolated",
+      "layers": [
+        { "texture": "minecraft:block/stone" },
+        { "texture": "minecraft:block/prismarine", "blend": "multiply" }
+      ]
+    },
+    {
+      "type": "veneer:composite",
+      "sprite": "veneer:block/test_baked",
+      "interpolation_step": 2,
+      "layers": [
+        { "texture": "minecraft:block/magma" },
+        { "texture": "minecraft:block/sculk_catalyst_side_bloom", "blend": "add" }
+      ]
+    }
+  ]
+}

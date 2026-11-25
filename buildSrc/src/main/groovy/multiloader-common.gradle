@@ -1,0 +1,32 @@
+plugins {
+    id 'java-library'
+}
+
+base {
+    archivesName = "${mod_id}-${project.name}-${minecraft_version}"
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(java_version)
+    withSourcesJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = java_version.toInteger()
+}
+
+processResources {
+    def props = [
+        'version', 'mod_id', 'mod_name', 'mod_author', 'license', 'description',
+        'java_version', 'minecraft_version', 'fabric_loader_version'
+    ].collectEntries { [it, project.property(it).toString()] }
+    inputs.properties(props)
+    filesMatching(['fabric.mod.json', 'META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
+        expand props
+    }
+}
