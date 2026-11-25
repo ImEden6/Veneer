@@ -3,7 +3,8 @@
   "package": "com.mervyn.veneer.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "MultiPackResourceManagerMixin"
+    "MultiPackResourceManagerMixin",
+    "ReloadableResourceManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
