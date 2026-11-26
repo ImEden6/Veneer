@@ -16,7 +16,7 @@ config="veneer.neoforge.mixins.json"
 [[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"
-versionRange="[21.1.0,)"
+versionRange="[26.1.0,)"
 ordering="NONE"
 side="CLIENT"
 
