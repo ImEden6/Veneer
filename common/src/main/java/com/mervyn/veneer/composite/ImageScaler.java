@@ -13,7 +13,7 @@ public final class ImageScaler {
         for (int y = 0; y < targetHeight; y++) {
             int sourceY = y * source.getHeight() / targetHeight;
             for (int x = 0; x < targetWidth; x++) {
-                result.setPixelRGBA(x, y, source.getPixelRGBA(x * source.getWidth() / targetWidth, sourceY));
+                result.setPixel(x, y, source.getPixel(x * source.getWidth() / targetWidth, sourceY));
             }
         }
         return result;

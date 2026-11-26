@@ -1,29 +1,27 @@
 package com.mervyn.veneer.composite;
 
-import net.minecraft.util.FastColor;
-
 public final class PixelMath {
     private PixelMath() {
     }
 
     public static int alpha(int abgr) {
-        return FastColor.ABGR32.alpha(abgr);
+        return abgr >>> 24;
     }
 
     public static int blue(int abgr) {
-        return FastColor.ABGR32.blue(abgr);
+        return abgr >> 16 & 0xFF;
     }
 
     public static int green(int abgr) {
-        return FastColor.ABGR32.green(abgr);
+        return abgr >> 8 & 0xFF;
     }
 
     public static int red(int abgr) {
-        return FastColor.ABGR32.red(abgr);
+        return abgr & 0xFF;
     }
 
     public static int pack(int alpha, int blue, int green, int red) {
-        return FastColor.ABGR32.color(alpha, blue, green, red);
+        return alpha << 24 | blue << 16 | green << 8 | red;
     }
 
     public static int applyTint(int abgr, int rgbTint) {

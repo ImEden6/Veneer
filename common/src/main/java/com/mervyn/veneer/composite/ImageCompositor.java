@@ -1,6 +1,7 @@
 package com.mervyn.veneer.composite;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.util.ARGB;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,20 +57,20 @@ public final class ImageCompositor {
                 for (int x = 0; x < targetFrameW; x++) {
                     int srcX = transform.sourceX(x, y, targetFrameW, targetFrameH) * layer.srcFrameW() / targetFrameW;
                     int srcY = transform.sourceY(x, y, targetFrameW, targetFrameH) * layer.srcFrameH() / targetFrameH;
-                    int pixel = layer.image().getPixelRGBA(srcX, layer.srcYOffset() + srcY);
+                    int pixel = abgr(layer.image(), srcX, layer.srcYOffset() + srcY);
                     if (layer.interpWeight255() > 0) {
-                        pixel = PixelMath.lerpAbgr(pixel, layer.image().getPixelRGBA(srcX, layer.nextSrcYOffset() + srcY),
+                        pixel = PixelMath.lerpAbgr(pixel, abgr(layer.image(), srcX, layer.nextSrcYOffset() + srcY),
                                 layer.interpWeight255() / 255.0F);
                     }
                     if (layer.tintRgb().isPresent()) {
                         pixel = PixelMath.applyTint(pixel, layer.tintRgb().getAsInt());
                     }
                     if (mask != null) {
-                        int maskPixel = mask.getPixelRGBA(x * mask.getWidth() / targetFrameW, y * mask.getHeight() / targetFrameH);
+                        int maskPixel = abgr(mask, x * mask.getWidth() / targetFrameW, y * mask.getHeight() / targetFrameH);
                         pixel = PixelMath.applyMask(pixel, maskPixel, layer.invertMask());
                     }
                     pixel = PixelMath.applyOpacity(pixel, layer.opacity());
-                    dst.setPixelRGBA(x, dstY, layer.blendMode().blend(dst.getPixelRGBA(x, dstY), pixel));
+                    setAbgr(dst, x, dstY, layer.blendMode().blend(abgr(dst, x, dstY), pixel));
                 }
             }
         }
@@ -89,7 +90,7 @@ public final class ImageCompositor {
             }
         }
 
-        dst.fillRect(0, dstYOffset, targetFrameW, targetFrameH, pbrType.neutralAbgr());
+        dst.fillRect(0, dstYOffset, targetFrameW, targetFrameH, ARGB.fromABGR(pbrType.neutralAbgr()));
         for (PbrFrameLayerSpec layer : layers) {
             NativeImage mask = layer.mask();
             NativeImage pbr = layer.pbrImage();
@@ -103,13 +104,13 @@ public final class ImageCompositor {
                     int v = transform.sourceY(x, y, targetFrameW, targetFrameH);
                     int albedoX = u * layer.albedoFrameW() / targetFrameW;
                     int albedoY = v * layer.albedoFrameH() / targetFrameH;
-                    int albedo = layer.albedo().getPixelRGBA(albedoX, layer.albedoYOffset() + albedoY);
+                    int albedo = abgr(layer.albedo(), albedoX, layer.albedoYOffset() + albedoY);
                     if (layer.interpWeight255() > 0) {
                         albedo = PixelMath.lerpAbgr(albedo,
-                                layer.albedo().getPixelRGBA(albedoX, layer.nextAlbedoYOffset() + albedoY), weight);
+                                abgr(layer.albedo(), albedoX, layer.nextAlbedoYOffset() + albedoY), weight);
                     }
                     if (mask != null) {
-                        int maskPixel = mask.getPixelRGBA(x * mask.getWidth() / targetFrameW, y * mask.getHeight() / targetFrameH);
+                        int maskPixel = abgr(mask, x * mask.getWidth() / targetFrameW, y * mask.getHeight() / targetFrameH);
                         albedo = PixelMath.applyMask(albedo, maskPixel, layer.invertMask());
                     }
                     albedo = PixelMath.applyOpacity(albedo, layer.opacity());
@@ -117,17 +118,25 @@ public final class ImageCompositor {
                     if (pbr != null) {
                         int pbrX = u * layer.pbrFrameW() / targetFrameW;
                         int pbrY = v * layer.pbrFrameH() / targetFrameH;
-                        source = pbr.getPixelRGBA(pbrX, layer.pbrYOffset() + pbrY);
+                        source = abgr(pbr, pbrX, layer.pbrYOffset() + pbrY);
                         if (layer.interpWeight255() > 0) {
-                            source = pbrType.lerp(source, pbr.getPixelRGBA(pbrX, layer.nextPbrYOffset() + pbrY), weight);
+                            source = pbrType.lerp(source, abgr(pbr, pbrX, layer.nextPbrYOffset() + pbrY), weight);
                         }
                         if (turnNormals) {
                             source = PbrMath.transformNormal(source, transform.rotate(), transform.flipX(), transform.flipY());
                         }
                     }
-                    dst.setPixelRGBA(x, dstY, pbrType.blend(dst.getPixelRGBA(x, dstY), source, PixelMath.alpha(albedo)));
+                    setAbgr(dst, x, dstY, pbrType.blend(abgr(dst, x, dstY), source, PixelMath.alpha(albedo)));
                 }
             }
         }
+    }
+
+    private static int abgr(NativeImage image, int x, int y) {
+        return ARGB.toABGR(image.getPixel(x, y));
+    }
+
+    private static void setAbgr(NativeImage image, int x, int y, int abgr) {
+        image.setPixel(x, y, ARGB.fromABGR(abgr));
     }
 }
