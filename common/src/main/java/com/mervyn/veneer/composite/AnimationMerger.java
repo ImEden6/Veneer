@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public final class AnimationMerger {
     static final int MAX_STEPS = 65536;
@@ -117,9 +118,10 @@ public final class AnimationMerger {
 
     public static AnimationMetadataSection toMetadata(Result result, int frameWidth, int frameHeight) {
         List<AnimationFrame> frames = result.schedule().stream()
-                .map(frame -> new AnimationFrame(frame.uniqueFrameIndex(), frame.durationTicks()))
+                .map(frame -> new AnimationFrame(frame.uniqueFrameIndex(), Optional.of(frame.durationTicks())))
                 .toList();
-        return new AnimationMetadataSection(frames, frameWidth, frameHeight, 1, result.outputInterpolated());
+        return new AnimationMetadataSection(Optional.of(frames), Optional.of(frameWidth), Optional.of(frameHeight), 1,
+                result.outputInterpolated());
     }
 
     static long period(List<List<Frame>> layers) {

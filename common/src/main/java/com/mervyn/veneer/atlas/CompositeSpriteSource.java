@@ -13,11 +13,11 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.renderer.texture.atlas.SpriteSource;
-import net.minecraft.client.renderer.texture.atlas.SpriteSourceType;
 import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import net.minecraft.client.resources.metadata.animation.FrameSize;
+import net.minecraft.client.resources.metadata.gui.GuiMetadataSection;
+import net.minecraft.client.resources.metadata.texture.TextureMetadataSection;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.metadata.MetadataSectionSerializer;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceMetadata;
@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public record CompositeSpriteSource(Identifier sprite, List<LayerDefinition> layers, int metadataSource,
                                     int maxFrames, boolean pbr, InterpolationMode interpolation,
@@ -44,8 +45,6 @@ public record CompositeSpriteSource(Identifier sprite, List<LayerDefinition> lay
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("interpolation_step", 1).forGetter(CompositeSpriteSource::interpolationStep),
             Codec.BOOL.optionalFieldOf("skip_if_exists", false).forGetter(CompositeSpriteSource::skipIfExists)
     ).apply(instance, CompositeSpriteSource::new));
-
-    public static SpriteSourceType TYPE;
 
     @Override
     public void run(ResourceManager resourceManager, Output output) {
@@ -127,7 +126,9 @@ public record CompositeSpriteSource(Identifier sprite, List<LayerDefinition> lay
                     .orElse(sources.get(0));
             AnimationMetadataSection animation = merged.isAnimated() ? AnimationMerger.toMetadata(merged, width, height) : null;
             SpriteContents contents = new SpriteContents(sprite, new FrameSize(width, height), result,
-                    withAnimation(base.metadata(), animation));
+                    Optional.ofNullable(animation),
+                    base.metadata().getTypedSections(Set.of(GuiMetadataSection.TYPE)),
+                    base.metadata().getSection(TextureMetadataSection.TYPE));
             result = null;
             VeneerConstants.LOGGER.info("Composited {} at {}x{} with {} frame(s)", sprite, width, height, frameCount);
             return contents;
@@ -222,7 +223,7 @@ public record CompositeSpriteSource(Identifier sprite, List<LayerDefinition> lay
 
     @Nullable
     private static Companion loadCompanion(Resource resource, Source albedo, List<NativeImage> opened) throws IOException {
-        AnimationMetadataSection animation = resource.metadata().getSection(AnimationMetadataSection.SERIALIZER).orElse(null);
+        AnimationMetadataSection animation = resource.metadata().getSection(AnimationMetadataSection.TYPE).orElse(null);
         NativeImage image = read(resource, opened);
         FrameSize size;
         if (animation != null) {
@@ -277,7 +278,7 @@ public record CompositeSpriteSource(Identifier sprite, List<LayerDefinition> lay
         NativeImage image = read(texture, opened);
         NativeImage mask = input.mask().isPresent() ? read(input.mask().get(), opened) : null;
 
-        AnimationMetadataSection animation = metadata.getSection(AnimationMetadataSection.SERIALIZER).orElse(null);
+        AnimationMetadataSection animation = metadata.getSection(AnimationMetadataSection.TYPE).orElse(null);
         if (animation == null) {
             return new Source(index, layer, image, mask, metadata, new FrameSize(image.getWidth(), image.getHeight()),
                     new AnimationMerger.Timeline(List.of(new AnimationMerger.Frame(0, 1)), false));
@@ -291,15 +292,16 @@ public record CompositeSpriteSource(Identifier sprite, List<LayerDefinition> lay
         }
         List<AnimationMerger.Frame> frames = frames(animation, image.getHeight() / size.height(), layer.texture());
         return new Source(index, layer, image, mask, metadata, size,
-                new AnimationMerger.Timeline(frames, animation.isInterpolatedFrames() && frames.size() > 1));
+                new AnimationMerger.Timeline(frames, animation.interpolatedFrames() && frames.size() > 1));
     }
 
     private List<AnimationMerger.Frame> frames(AnimationMetadataSection animation, int frameCount, Identifier texture) {
         List<AnimationMerger.Frame> listed = new ArrayList<>();
-        animation.forEachFrame((index, time) -> listed.add(new AnimationMerger.Frame(index, time)));
+        animation.frames().ifPresent(frames -> frames.forEach(frame ->
+                listed.add(new AnimationMerger.Frame(frame.index(), frame.timeOr(animation.defaultFrameTime())))));
         if (listed.isEmpty()) {
             for (int i = 0; i < frameCount; i++) {
-                listed.add(new AnimationMerger.Frame(i, animation.getDefaultFrameTime()));
+                listed.add(new AnimationMerger.Frame(i, animation.defaultFrameTime()));
             }
         }
 
@@ -320,22 +322,9 @@ public record CompositeSpriteSource(Identifier sprite, List<LayerDefinition> lay
         }
     }
 
-    private static ResourceMetadata withAnimation(ResourceMetadata base, @Nullable AnimationMetadataSection animation) {
-        return new ResourceMetadata() {
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> Optional<T> getSection(MetadataSectionSerializer<T> serializer) {
-                if (serializer == AnimationMetadataSection.SERIALIZER) {
-                    return Optional.ofNullable((T) animation);
-                }
-                return base.getSection(serializer);
-            }
-        };
-    }
-
     @Override
-    public SpriteSourceType type() {
-        return TYPE;
+    public MapCodec<CompositeSpriteSource> codec() {
+        return CODEC;
     }
 
     public record PbrImage(NativeImage image, @Nullable AnimationMetadataSection animation) {

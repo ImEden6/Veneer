@@ -33,7 +33,7 @@ public final class VirtualPbrResource {
         }
 
         ResourceMetadata metadata = composite.animation() == null ? ResourceMetadata.EMPTY
-                : new ResourceMetadata.Builder().put(AnimationMetadataSection.SERIALIZER, composite.animation()).build();
+                : ResourceMetadata.of(AnimationMetadataSection.TYPE, composite.animation());
         return new Resource(VirtualPackResources.INSTANCE, () -> new ByteArrayInputStream(png), () -> metadata);
     }
 }
