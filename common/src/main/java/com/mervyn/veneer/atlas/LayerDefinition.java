@@ -6,14 +6,14 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.HexFormat;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.regex.Pattern;
 
-public record LayerDefinition(ResourceLocation texture, BlendMode blend, OptionalInt tint, Optional<ResourceLocation> mask, boolean invertMask,
+public record LayerDefinition(Identifier texture, BlendMode blend, OptionalInt tint, Optional<Identifier> mask, boolean invertMask,
                               boolean optional, float opacity, int rotate, boolean flipX, boolean flipY) {
     private static final Pattern HEX_RGB = Pattern.compile("#?[0-9a-fA-F]{6}");
 
@@ -27,13 +27,13 @@ public record LayerDefinition(ResourceLocation texture, BlendMode blend, Optiona
     });
 
     public static final Codec<LayerDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ResourceLocation.CODEC.fieldOf("texture").forGetter(LayerDefinition::texture),
+            Identifier.CODEC.fieldOf("texture").forGetter(LayerDefinition::texture),
             BlendMode.CODEC.optionalFieldOf("blend", BlendMode.NORMAL).forGetter(LayerDefinition::blend),
             TINT_CODEC.optionalFieldOf("tint")
                     .xmap(tint -> tint.map(OptionalInt::of).orElseGet(OptionalInt::empty),
                             tint -> tint.isPresent() ? Optional.of(tint.getAsInt()) : Optional.<Integer>empty())
                     .forGetter(LayerDefinition::tint),
-            ResourceLocation.CODEC.optionalFieldOf("mask").forGetter(LayerDefinition::mask),
+            Identifier.CODEC.optionalFieldOf("mask").forGetter(LayerDefinition::mask),
             Codec.BOOL.optionalFieldOf("invert_mask", false).forGetter(LayerDefinition::invertMask),
             Codec.BOOL.optionalFieldOf("optional", false).forGetter(LayerDefinition::optional),
             Codec.floatRange(0.0F, 1.0F).optionalFieldOf("opacity", 1.0F).forGetter(LayerDefinition::opacity),

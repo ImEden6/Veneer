@@ -3,7 +3,7 @@ package com.mervyn.veneer.pbr;
 import com.mervyn.veneer.VeneerConstants;
 import com.mervyn.veneer.atlas.CompositeSpriteSource;
 import com.mervyn.veneer.composite.PbrType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.jetbrains.annotations.Nullable;
@@ -14,14 +14,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 public final class VeneerPbrRegistry {
-    private static final Map<ResourceLocation, PbrRecipe> RECIPES = new ConcurrentHashMap<>();
-    private static final Map<ResourceLocation, Optional<Resource>> BUILT = new ConcurrentHashMap<>();
+    private static final Map<Identifier, PbrRecipe> RECIPES = new ConcurrentHashMap<>();
+    private static final Map<Identifier, Optional<Resource>> BUILT = new ConcurrentHashMap<>();
     private static final ThreadLocal<Boolean> RESOLVING = ThreadLocal.withInitial(() -> false);
 
     private VeneerPbrRegistry() {
     }
 
-    public static void register(ResourceLocation texturePath, PbrRecipe recipe) {
+    public static void register(Identifier texturePath, PbrRecipe recipe) {
         PbrRecipe previous = RECIPES.put(texturePath, recipe);
         BUILT.remove(texturePath);
         if (previous != null && !previous.equals(recipe)) {
@@ -30,11 +30,11 @@ public final class VeneerPbrRegistry {
     }
 
     @Nullable
-    public static PbrRecipe get(ResourceLocation texturePath) {
+    public static PbrRecipe get(Identifier texturePath) {
         return RECIPES.get(texturePath);
     }
 
-    public static void remove(ResourceLocation texturePath) {
+    public static void remove(Identifier texturePath) {
         RECIPES.remove(texturePath);
         BUILT.remove(texturePath);
     }
@@ -44,7 +44,7 @@ public final class VeneerPbrRegistry {
         BUILT.clear();
     }
 
-    public static Optional<Resource> build(ResourceLocation texturePath, PbrRecipe recipe, ResourceManager resourceManager) {
+    public static Optional<Resource> build(Identifier texturePath, PbrRecipe recipe, ResourceManager resourceManager) {
         Optional<Resource> built = BUILT.get(texturePath);
         if (built == null) {
             built = Optional.ofNullable(resolve(() -> VirtualPbrResource.create(recipe, resourceManager)));

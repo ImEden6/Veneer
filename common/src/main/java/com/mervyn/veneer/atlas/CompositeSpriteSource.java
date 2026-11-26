@@ -16,7 +16,7 @@ import net.minecraft.client.renderer.texture.atlas.SpriteSource;
 import net.minecraft.client.renderer.texture.atlas.SpriteSourceType;
 import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import net.minecraft.client.resources.metadata.animation.FrameSize;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.metadata.MetadataSectionSerializer;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -30,11 +30,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinition> layers, int metadataSource,
+public record CompositeSpriteSource(Identifier sprite, List<LayerDefinition> layers, int metadataSource,
                                     int maxFrames, boolean pbr, InterpolationMode interpolation,
                                     int interpolationStep, boolean skipIfExists) implements SpriteSource {
     public static final MapCodec<CompositeSpriteSource> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ResourceLocation.CODEC.fieldOf("sprite").forGetter(CompositeSpriteSource::sprite),
+            Identifier.CODEC.fieldOf("sprite").forGetter(CompositeSpriteSource::sprite),
             ExtraCodecs.nonEmptyList(LayerDefinition.CODEC.listOf()).fieldOf("layers").forGetter(CompositeSpriteSource::layers),
             ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("metadata_source", 0).forGetter(CompositeSpriteSource::metadataSource),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("max_frames", 64).forGetter(CompositeSpriteSource::maxFrames),
@@ -59,7 +59,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
         }
         List<Input> inputs = inputs(resourceManager);
         for (PbrType type : PbrType.values()) {
-            ResourceLocation path = TEXTURE_ID_CONVERTER.idToFile(withSuffix(sprite, type.suffix()));
+            Identifier path = TEXTURE_ID_CONVERTER.idToFile(withSuffix(sprite, type.suffix()));
             if (pbr && VeneerPbrRegistry.resolve(() -> companions(resourceManager, inputs, type)).stream().anyMatch(Optional::isPresent)) {
                 VeneerPbrRegistry.register(path, new VeneerPbrRegistry.PbrRecipe(this, type));
             }
@@ -82,7 +82,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
                 .toList();
     }
 
-    private static ResourceLocation withSuffix(ResourceLocation id, String suffix) {
+    private static Identifier withSuffix(Identifier id, String suffix) {
         return id.withPath(id.getPath() + suffix);
     }
 
@@ -144,7 +144,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
 
     @Nullable
     public PbrImage compositePbr(ResourceManager resourceManager, PbrType type) {
-        ResourceLocation name = withSuffix(sprite, type.suffix());
+        Identifier name = withSuffix(sprite, type.suffix());
         List<Input> inputs = inputs(resourceManager);
         List<Optional<Resource>> companions = companions(resourceManager, inputs, type);
         List<NativeImage> opened = new ArrayList<>();
@@ -294,7 +294,7 @@ public record CompositeSpriteSource(ResourceLocation sprite, List<LayerDefinitio
                 new AnimationMerger.Timeline(frames, animation.isInterpolatedFrames() && frames.size() > 1));
     }
 
-    private List<AnimationMerger.Frame> frames(AnimationMetadataSection animation, int frameCount, ResourceLocation texture) {
+    private List<AnimationMerger.Frame> frames(AnimationMetadataSection animation, int frameCount, Identifier texture) {
         List<AnimationMerger.Frame> listed = new ArrayList<>();
         animation.forEachFrame((index, time) -> listed.add(new AnimationMerger.Frame(index, time)));
         if (listed.isEmpty()) {

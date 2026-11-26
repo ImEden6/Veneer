@@ -3,7 +3,7 @@ package com.mervyn.veneer.pbr;
 import com.mervyn.veneer.atlas.CompositeSpriteSource;
 import com.mervyn.veneer.atlas.InterpolationMode;
 import com.mervyn.veneer.composite.PbrType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -17,9 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VeneerPbrRegistryTest {
-    private static final ResourceLocation PATH = ResourceLocation.parse("veneer:textures/block/fancy_ore_n.png");
+    private static final Identifier PATH = Identifier.parse("veneer:textures/block/fancy_ore_n.png");
     private static final VeneerPbrRegistry.PbrRecipe RECIPE = new VeneerPbrRegistry.PbrRecipe(
-            new CompositeSpriteSource(ResourceLocation.parse("veneer:block/fancy_ore"), List.of(), 0, 64, true,
+            new CompositeSpriteSource(Identifier.parse("veneer:block/fancy_ore"), List.of(), 0, 64, true,
                     InterpolationMode.AUTO, 1, false),
             PbrType.NORMAL);
 
