@@ -1,16 +1,17 @@
 package com.mervyn.veneer.mixin;
 
-import com.google.common.collect.BiMap;
-import net.minecraft.client.renderer.texture.atlas.SpriteSourceType;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.client.renderer.texture.atlas.SpriteSource;
 import net.minecraft.client.renderer.texture.atlas.SpriteSources;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.ExtraCodecs;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(SpriteSources.class)
 public interface SpriteSourcesAccessor {
-    @Accessor("TYPES")
-    static BiMap<Identifier, SpriteSourceType> veneer$getTypes() {
+    @Accessor("ID_MAPPER")
+    static ExtraCodecs.LateBoundIdMapper<Identifier, MapCodec<? extends SpriteSource>> veneer$getIdMapper() {
         throw new AssertionError();
     }
 }
