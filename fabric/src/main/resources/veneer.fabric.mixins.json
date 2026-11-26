@@ -5,7 +5,11 @@
   "client": [
     "SpriteSourcesAccessor",
     "MultiPackResourceManagerMixin",
-    "ReloadableResourceManagerMixin"
+    "ReloadableResourceManagerMixin",
+    "TextureAtlasAccessor",
+    "AnimationStateAccessor",
+    "IrisPbrSpriteAccessor",
+    "IrisPbrAtlasMixin"
   ],
   "injectors": {
     "defaultRequire": 1

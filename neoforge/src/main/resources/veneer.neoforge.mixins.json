@@ -4,7 +4,11 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "MultiPackResourceManagerMixin",
-    "ReloadableResourceManagerMixin"
+    "ReloadableResourceManagerMixin",
+    "TextureAtlasAccessor",
+    "AnimationStateAccessor",
+    "IrisPbrSpriteAccessor",
+    "IrisPbrAtlasMixin"
   ],
   "injectors": {
     "defaultRequire": 1
