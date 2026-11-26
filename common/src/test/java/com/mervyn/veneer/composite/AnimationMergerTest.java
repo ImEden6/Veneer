@@ -100,9 +100,9 @@ class AnimationMergerTest {
     void metadataListsSchedule() {
         Result result = discrete(List.of(strip(2, 5)), 64);
         List<Integer> seen = new ArrayList<>();
-        AnimationMerger.toMetadata(result, 16, 16).forEachFrame((index, time) -> {
-            seen.add(index);
-            seen.add(time);
+        AnimationMerger.toMetadata(result, 16, 16).frames().orElseThrow().forEach(frame -> {
+            seen.add(frame.index());
+            seen.add(frame.time().orElseThrow());
         });
         assertEquals(List.of(0, 5, 1, 5), seen);
     }
@@ -170,7 +170,7 @@ class AnimationMergerTest {
         assertFalse(stepped.outputInterpolated());
         assertEquals(result.uniqueFrames(), stepped.uniqueFrames());
         assertEquals(result.schedule(), stepped.schedule());
-        assertFalse(AnimationMerger.toMetadata(stepped, 16, 16).isInterpolatedFrames());
+        assertFalse(AnimationMerger.toMetadata(stepped, 16, 16).interpolatedFrames());
     }
 
     @Test
