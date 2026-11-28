@@ -9,7 +9,7 @@ displayName="${mod_name}"
 displayTest="IGNORE_ALL_VERSION"
 authors="${mod_author}"
 description='''${description}'''
-logoFile="icon.png"
+iconFile="icon.png"
 
 [[mixins]]
 config="veneer.neoforge.mixins.json"
