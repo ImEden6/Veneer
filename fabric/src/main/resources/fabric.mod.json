@@ -6,6 +6,7 @@
   "description": "${description}",
   "authors": ["${mod_author}"],
   "license": "${license}",
+  "icon": "icon.png",
   "environment": "client",
   "entrypoints": {
     "client": ["com.mervyn.veneer.VeneerFabricClient"]
